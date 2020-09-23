@@ -204,6 +204,26 @@ WebAssembly.instantiate(Module['wasm'], imports).then(function(output) {
   /*** ASM_MODULE_EXPORTS ***/
 #endif
   wasmTable = asm['__indirect_function_table'];
+  wasmMemory = asm['memory'];
+  buffer = wasmMemory.buffer;
+
+#if ASSERTIONS
+  assert(wasmTable);
+  assert(wasmMemory);
+  assert(buffer.byteLength === {{{ INITIAL_MEMORY }}});
+#if USE_PTHREADS
+  assert(buffer instanceof SharedArrayBuffer, 'requested a shared WebAssembly.Memory but the returned buffer is not a SharedArrayBuffer, indicating that while the browser has SharedArrayBuffer it does not have WebAssembly threads support - you may need to set a flag');
+#endif
+#endif
+
+  updateGlobalBufferAndViews(buffer);
+
+#if MEM_INIT_METHOD == 1 && !MEM_INIT_IN_WASM && !SINGLE_FILE
+#if ASSERTIONS
+  if (!Module['mem']) throw 'Must load memory initializer as an ArrayBuffer in to variable Module.mem before adding compiled output .js script to the DOM';
+#endif
+  HEAPU8.set(new Uint8Array(Module['mem']), {{{ GLOBAL_BASE }}});
+#endif
 
   initRuntime(asm);
 #if USE_PTHREADS && PTHREAD_POOL_SIZE
